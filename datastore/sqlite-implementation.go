@@ -1,7 +1,6 @@
 package datastore
 
 import (
-	"bmgf-dashboard/datatypes"
 	"database/sql"
 
 	_ "modernc.org/sqlite" // pure Go sqlite driver
@@ -39,54 +38,4 @@ func (s *SQLiteStore) init() error {
 		rtpcr enum('Positive', 'Negative', 'Untested', 'Suspected')	
 	);`)
 	return err
-}
-
-func (s *SQLiteStore) InsertSample(rec datatypes.SampleRecord) error {
-	_, err := s.db.Exec(`
-	INSERT INTO samples 
-	(sample_id, sample_type, category, sampling_site, milk_union, district, collection_date, rtpcr)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		rec.SampleID,
-		rec.SampleType,
-		rec.Category,
-		rec.SamplingSite,
-		rec.MilkUnion,
-		rec.District,
-		rec.CollectionDate.Format("2006-01-02"),
-		rec.RTPCR,
-	)
-	return err
-}
-
-func (s *SQLiteStore) BulkInsert(samples []datatypes.SampleRecord) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare(`
-	INSERT INTO samples 
-	(sample_id, sample_type, category, sampling_site, milk_union, district, collection_date, rtpcr)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-
-	for _, rec := range samples {
-		_, err := stmt.Exec(
-			rec.SampleID,
-			rec.SampleType,
-			rec.Category,
-			rec.SamplingSite,
-			rec.MilkUnion,
-			rec.District,
-			rec.CollectionDate.Format("2006-01-02"),
-			rec.RTPCR,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
 }

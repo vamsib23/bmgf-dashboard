@@ -10,15 +10,16 @@ type SampleRecord struct {
 	RTPCR          string
 	MilkUnion      string
 }
-type SampleRecord struct {
-	ID             int       // ID representing the unique addressable id of the sample
-	SampleID       string    // sample name provided by the project user
-	SampleType     string    //
-	Category       string    // Clinical / Environmental
-	MilkUnion      string    // Name of milk union
-	CollectionDate time.Time // only the date on which the sample was collected.
-	RTPCR          string    // Positive / Negative/ untested/ suspected
-}
+
+// type SampleRecord struct {
+// 	ID             int       // ID representing the unique addressable id of the sample
+// 	SampleID       string    // sample name provided by the project user
+// 	SampleType     string    //
+// 	Category       string    // Clinical / Environmental
+// 	MilkUnion      string    // Name of milk union
+// 	CollectionDate time.Time // only the date on which the sample was collected.
+// 	RTPCR          string    // Positive / Negative/ untested/ suspected
+// }
 
 // for reading and writing to the locationdetails database table.
 type LocationDetails struct {
