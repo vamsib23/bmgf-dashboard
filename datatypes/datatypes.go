@@ -4,6 +4,13 @@ import "time"
 
 // for reading and writing to the samples table in the database
 type SampleRecord struct {
+	ID             int
+	SampleID       string
+	CollectionDate time.Time
+	RTPCR          string
+	MilkUnion      string
+}
+type SampleRecord struct {
 	ID             int       // ID representing the unique addressable id of the sample
 	SampleID       string    // sample name provided by the project user
 	SampleType     string    //
@@ -18,10 +25,4 @@ type LocationDetails struct {
 	ID           int
 	SamplingSite string // Name of area in which sample was collected
 	District     string
-}
-
-// for reading and writing to the milkunions database table.
-type MilkUnion struct {
-	ID        int
-	MilkUnion string
 }
