@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"bmgf-dashboard/datatypes"
 	"database/sql"
 
 	_ "modernc.org/sqlite" // pure Go sqlite driver
@@ -25,17 +26,50 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 }
 
 func (s *SQLiteStore) init() error {
-	_, err := s.db.Exec(`
-	CREATE TABLE IF NOT EXISTS samples (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		sample_id TEXT,
-		sample_type TEXT,
-		category TEXT,
-		sampling_site TEXT,
-		milk_union TEXT,
-		district TEXT,
-		collection_date TEXT,
-		rtpcr enum('Positive', 'Negative', 'Untested', 'Suspected')	
-	);`)
+	if err := s.createTables(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SQLiteStore) Close() error {
+	return s.db.Close()
+}
+
+func (s *SQLiteStore) createTables() error {
+	query := `CREATE TABLE IF NOT EXISTS samples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sample_name TEXT UNIQUE,
+    sample_type TEXT,
+    sample_category TEXT,
+    sampling_site TEXT,
+    milk_union TEXT,
+    district TEXT,
+    collection_date TEXT,
+    rtpcr TEXT CHECK (rtpcr IN ('Positive', 'Negative', 'Untested', 'Suspected')) DEFAULT 'Untested');`
+	_, err := s.db.Exec(query)
 	return err
+}
+
+func (s *SQLiteStore) BulkInsert(samples []datatypes.SampleRecord) error {
+	query := `INSERT OR IGNORE INTO samples (sample_name, sample_type, sample_category, sampling_site, milk_union, district, collection_date, rtpcr) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
+	stmt, err := s.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, sample := range samples {
+		_, err := stmt.Exec(sample.SampleID,
+			sample.SpecimenType,
+			sample.SampleCategory,
+			sample.SamplingSite,
+			sample.MilkUnion,
+			sample.District,
+			sample.CollectionDate,
+			sample.RTPCRResult)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
