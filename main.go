@@ -4,14 +4,36 @@ import (
 	"bmgf-dashboard/datastore"
 	"bmgf-dashboard/datatypes"
 	"encoding/csv"
+	"encoding/json"
+	"html/template"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 var DB *datastore.SQLiteStore
+
+type ThemeConfig struct {
+	ActiveTheme string `json:"active_theme"`
+}
+
+func LoadThemeConfig() (string, error) {
+	data, err := os.ReadFile("themes/config.json")
+	if err != nil {
+		return "", err
+	}
+
+	var cfg ThemeConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return "", err
+	}
+
+	return cfg.ActiveTheme, nil
+}
 
 func main() {
 	// database will be injected into main, currently using sqlite, may be changed in future
@@ -21,11 +43,28 @@ func main() {
 	}
 	defer DB.Close()
 
-	data := GetDataFromCSVFile("miscellaneous\\BMGF Dashboard LSDV 18-11-2025.csv")
-	if err := DB.BulkInsert(data); err != nil {
-		log.Fatal("error inserting bulk data:", err)
-	}
+	// data := GetDataFromCSVFile("miscellaneous\\BMGF Dashboard LSDV 18-11-2025.csv")
+	// if err := DB.BulkInsert(data); err != nil {
+	// 	log.Fatal("error inserting bulk data:", err)
+	// }
 
+	activeTheme, _ := LoadThemeConfig()
+
+	themePath := filepath.Join("themes", activeTheme)
+
+	// Serve static assets (CSS, JS, Images)
+	assetsPath := filepath.Join(themePath, "assets")
+
+	// Serve template files
+	templates := template.Must(template.ParseGlob(filepath.Join(themePath, "*.html")))
+
+	serv := http.NewServeMux()
+	serv.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsPath))))
+	serv.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+		templates.ExecuteTemplate(w, "index.html", nil)
+	})
+
+	log.Fatal(http.ListenAndServe(":2025", serv))
 }
 
 func GetDataFromCSVFile(filename string) []datatypes.SampleRecord {

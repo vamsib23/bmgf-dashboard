@@ -26,7 +26,8 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 }
 
 func (s *SQLiteStore) init() error {
-	if err := s.createTables(); err != nil {
+	err := s.createTables()
+	if err != nil {
 		return err
 	}
 	return nil
@@ -46,7 +47,14 @@ func (s *SQLiteStore) createTables() error {
     milk_union TEXT,
     district TEXT,
     collection_date TEXT,
-    rtpcr TEXT CHECK (rtpcr IN ('Positive', 'Negative', 'Untested', 'Suspected')) DEFAULT 'Untested');`
+    rtpcr TEXT CHECK (rtpcr IN ('Positive', 'Negative', 'Untested', 'Suspected')) DEFAULT 'Untested');
+	
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT UNIQUE,
+		password TEXT,
+		role TEXT
+	);`
 	_, err := s.db.Exec(query)
 	return err
 }
