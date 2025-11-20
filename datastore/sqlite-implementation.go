@@ -3,9 +3,16 @@ package datastore
 import (
 	"bmgf-dashboard/datatypes"
 	"database/sql"
+	"log"
+	"time"
 
 	_ "modernc.org/sqlite" // pure Go sqlite driver
 )
+
+func parseDate(dateStr string) (time.Time, error) {
+	layout := "2006-01-02 15:04:05 -0700 MST"
+	return time.Parse(layout, dateStr)
+}
 
 type SQLiteStore struct {
 	db *sql.DB
@@ -54,7 +61,13 @@ func (s *SQLiteStore) createTables() error {
 		username TEXT UNIQUE,
 		password TEXT,
 		role TEXT
-	);`
+	);
+	
+	CREATE TABLE IF NOT EXISTS theme_config (
+		theme_name TEXT,
+		active BOOLEAN
+	);
+	`
 	_, err := s.db.Exec(query)
 	return err
 }
@@ -67,7 +80,7 @@ func (s *SQLiteStore) BulkInsert(samples []datatypes.SampleRecord) error {
 	}
 	defer stmt.Close()
 	for _, sample := range samples {
-		_, err := stmt.Exec(sample.SampleID,
+		_, err := stmt.Exec(sample.SampleUniqueID,
 			sample.SpecimenType,
 			sample.SampleCategory,
 			sample.SamplingSite,
@@ -80,4 +93,31 @@ func (s *SQLiteStore) BulkInsert(samples []datatypes.SampleRecord) error {
 		}
 	}
 	return nil
+}
+
+func (s *SQLiteStore) GetInfoForPublicAPI() ([]datatypes.SampleRecord, error) {
+	query := `SELECT id, sample_name, sample_type, sample_category, sampling_site, milk_union, district, collection_date, rtpcr FROM samples;`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		log.Println("[sqlite-implementation][GetInfoForPublicAPI] error in query", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var samples []datatypes.SampleRecord
+	for rows.Next() {
+		var sample datatypes.SampleRecord
+		var collectionDate string
+		err := rows.Scan(&sample.ID, &sample.SampleUniqueID, &sample.SpecimenType, &sample.SampleCategory, &sample.SamplingSite, &sample.MilkUnion, &sample.District, &collectionDate, &sample.RTPCRResult)
+		if err != nil {
+			log.Println("[sqlite-implementation][GetInfoForPublicAPI] error while scanning variables", err)
+			return nil, err
+		}
+		sample.CollectionDate, err = parseDate(collectionDate)
+		if err != nil {
+			log.Println("[sqlite-implementation][GetInfoForPublicAPI] error while parsing date", err)
+			return nil, err
+		}
+		samples = append(samples, sample)
+	}
+	return samples, nil
 }

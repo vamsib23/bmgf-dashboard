@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"middlewares"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,11 +18,14 @@ import (
 
 var DB *datastore.SQLiteStore
 
+const PORT = ":2025"
+
 type ThemeConfig struct {
 	ActiveTheme string `json:"active_theme"`
 }
 
 func LoadThemeConfig() (string, error) {
+	// @TODO: replace reading from config file with reading from database
 	data, err := os.ReadFile("themes/config.json")
 	if err != nil {
 		return "", err
@@ -63,8 +67,18 @@ func main() {
 	serv.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		templates.ExecuteTemplate(w, "index.html", nil)
 	})
-
-	log.Fatal(http.ListenAndServe(":2025", serv))
+	serv.HandleFunc("/data/all", func(w http.ResponseWriter, r *http.Request) {
+		samples, err := DB.GetInfoForPublicAPI()
+		if err != nil {
+			http.Error(w, "Error fetching data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(samples)
+	})
+	servWithlogging := middlewares.Logging(serv)
+	log.Println("Starting webserver at", PORT)
+	log.Fatal(http.ListenAndServe(PORT, servWithlogging))
 }
 
 func GetDataFromCSVFile(filename string) []datatypes.SampleRecord {
@@ -88,7 +102,7 @@ func GetDataFromCSVFile(filename string) []datatypes.SampleRecord {
 			return nil
 		}
 		log.Println(record)
-		SampleCollectionDt, err := time.Parse("02-01-2006", record[7])
+		SampleCollectionDt, err := time.Parse("02-01-2006 15:04", record[7])
 		if err != nil {
 			log.Println("error parsing the date", err)
 			return nil
@@ -106,7 +120,7 @@ func GetDataFromCSVFile(filename string) []datatypes.SampleRecord {
 			rtpcrresult = "Suspected"
 		}
 		samples = append(samples, datatypes.SampleRecord{
-			SampleID:       record[1],
+			SampleUniqueID: record[1],
 			SpecimenType:   record[2],
 			SampleCategory: record[3],
 			SamplingSite:   record[4],

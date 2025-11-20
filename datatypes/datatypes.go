@@ -5,7 +5,7 @@ import "time"
 // for reading and writing to the samples table in the database
 type SampleRecord struct {
 	ID             int
-	SampleID       string
+	SampleUniqueID string
 	SpecimenType   string
 	SampleCategory string
 	SamplingSite   string

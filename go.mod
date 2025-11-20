@@ -16,3 +16,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+require middlewares v0.0.0
+
+replace middlewares => ../middlewares
